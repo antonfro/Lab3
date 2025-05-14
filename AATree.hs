@@ -35,34 +35,62 @@ get x (Node _ l d r)
 split :: AATree a -> AATree a
 split (Node tk tl td (Node rk rl rd (Node rrk rrl rrd rrr))) -- t = this, r = right (rr = RightRightTree)
         | tk == rrk = Node (rk+1) (Node tk tl td rl) rd (Node rrk rrl rrd rrr)
---split t = t -- t = tree
+split t = t -- t = tree
 
 skew  :: AATree a -> AATree a
-skew (Node tk (Node lk ll ld lr) td tr) 
+skew (Node tk (Node lk ll ld lr) td tr)
         | tk == lk = Node lk ll ld (Node tk lr td tr)
---skew t = t
+skew t = t
 
 insert :: Ord a => a -> AATree a -> AATree a
-insert x Empty = Node 1 Empty x Empty -- If empty tree
+insert x Empty = Node 1 Empty x Empty -- if empty tree
 insert x (Node k l d r) -- finds the right spot
         | x == d = Node k l d r
-        | x < d = insert x l
-        | x > d = insert x r
+        | x < d = (split . skew) (Node k (insert x l) d r)
+        | x > d = (split . skew) (Node k l d (insert x r))
+
+create :: (Eq a, Ord a) => [a] -> AATree a
+create [] = Empty
+create (a:as) = create2 as (insert a Empty)
+
+create2 :: (Eq a, Ord a) => [a] -> AATree a -> AATree a
+create2 [] t = t
+create2 (a:as) (Node k l d r) = create2 as (insert a (Node k l d r))
 
 inorder :: AATree a -> [a]
-inorder = error "inorder not implemented"
+inorder Empty = []
+inorder (Node _ Empty d Empty) = [d]
+inorder (Node _ l d r) = inorder l ++ [d] ++ inorder r
 
 size :: AATree a -> Int
-size = error "size not implemented"
+size Empty = 0
+size (Node _ l _ r) = size l + 1 + size r
 
 height :: AATree a -> Int
-height = error "height not implemented"
+height Empty = 0
+height (Node k _ _ _) = k
 
 --------------------------------------------------------------------------------
 -- Optional function
 
-remove :: Ord a => a -> AATree a -> AATree a
-remove = error "remove not implemented"
+remove :: Ord a => a -> AATree a -> AATree a -- 'Find node then delete max from l and put it there'
+remove _ Empty = Empty
+remove x (Node k l d r) -- Finds the node that will be deleted
+        | x == d = remove2 (Node k l d r)
+        | x < d = Node k (remove x l) d r
+        | x > d = Node k l d (remove x r)
+        where
+            remove2 (Node tk (Node lk ll ld lr) _ (Node rk rl rd rr))
+                    | l == Empty && r == Empty = Empty
+                    | l /= Empty && r == Empty = Node (lk+1) ll ld lr 
+                    | l == Empty && r /= Empty = Node (rk+1) rl rd rr
+                    | otherwise = Node tk (remove (maxVal l) l) (maxVal l) r
+
+maxVal :: Eq a => AATree a -> a
+maxVal Empty = error "Empty tree"
+maxVal (Node _ _ d r)
+        | r == Empty = d
+        | r /= Empty = maxVal r
 
 --------------------------------------------------------------------------------
 -- Check that an AA tree is ordered and obeys the AA invariants
@@ -100,4 +128,3 @@ rightSub :: AATree a -> AATree a
 rightSub = error "rightSub not implemented"
 
 --------------------------------------------------------------------------------
-
