@@ -50,6 +50,7 @@ example4 = Node 3
               10 
               (Node 1 Empty 20 Empty)
 
+example5 = Node 1 Empty 2 (Node 0 Empty 1 Empty)
 
 get :: Ord a => a -> AATree a -> Maybe a
 get _ Empty = Nothing
@@ -110,7 +111,9 @@ checkTree root =
 
 -- True if the given list is ordered
 isSorted :: Ord a => [a] -> Bool
-isSorted = error "isSorted not implemented"
+isSorted [] = True
+isSorted [x] = True
+isSorted (x:y:xs) = if x < y && isSorted (y:xs) then True else False
 
 -- Check if the invariant is true for a single AA node
 -- You may want to write this as a conjunction e.g.
