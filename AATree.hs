@@ -12,18 +12,45 @@ module AATree (
   inorder,       -- AATree a -> [a]
   remove,        -- Ord a => a -> AATree a -> AATree a
   size,          -- AATree a -> Int
-  height,        -- AATree a -> Int
+  -- height,        -- AATree a -> Int
   checkTree      -- Ord a => AATree a -> Bool
  ) where
 
 --------------------------------------------------------------------------------
 
+
+
 -- AA search trees
 data AATree a = Empty | Node Int (AATree a) a (AATree a) -- What a node looks like -> (Node (Level k) (LeftTree l) (Data d) (RightTree r))
   deriving (Eq, Show, Read)
 
+example1 :: AATree Int
+example1 = Empty
+
+
 emptyTree :: AATree a
 emptyTree = Empty
+
+example2 :: AATree Int
+example2 = Node 1 Empty 10 Empty
+
+
+example3 :: AATree Int
+example3 = Node 2 
+              (Node 1 Empty 5 Empty) 
+              10 
+              (Node 1 Empty 15 Empty)
+              
+example4 :: AATree Int
+example4 = Node 3 
+              (Node 2 
+                  (Node 1 Empty 2 Empty)
+                  5 
+                  Empty)
+              10 
+              (Node 1 Empty 20 Empty)
+
+example5 = Node 1 Empty 2 (Node 0 Empty 1 Empty)
 
 get :: Ord a => a -> AATree a -> Maybe a
 get _ Empty = Nothing
@@ -50,13 +77,19 @@ insert x (Node k l d r) -- finds the right spot
         | x > d = insert x r
 
 inorder :: AATree a -> [a]
-inorder = error "inorder not implemented"
+inorder Empty = []
+inorder (Node _ Empty d Empty) = [d]
+inorder (Node _ l d r) = inorder l ++ [d] ++ inorder r
 
 size :: AATree a -> Int
-size = error "size not implemented"
+size Empty = 0
+size (Node _ Empty d Empty) = 1
+size (Node _ l d r) = size l + 1 + size r
 
 height :: AATree a -> Int
-height = error "height not implemented"
+height Empty = 0
+height (Node k _ _ _) = k
+
 
 --------------------------------------------------------------------------------
 -- Optional function
@@ -78,7 +111,9 @@ checkTree root =
 
 -- True if the given list is ordered
 isSorted :: Ord a => [a] -> Bool
-isSorted = error "isSorted not implemented"
+isSorted [] = True
+isSorted [x] = True
+isSorted (x:y:xs) = if x < y && isSorted (y:xs) then True else False
 
 -- Check if the invariant is true for a single AA node
 -- You may want to write this as a conjunction e.g.
