@@ -17,6 +17,8 @@ module AATree (
 
 --------------------------------------------------------------------------------
 
+
+
 -- AA search trees
 data AATree a = Empty | Node Int (AATree a) a (AATree a) 
   deriving (Eq, Show, Read)
@@ -44,7 +46,9 @@ insert x (Node k l d r) -- finds the right spot
         | x > d = insert x r
 
 inorder :: AATree a -> [a]
-inorder = error "inorder not implemented"
+inorder Empty = []
+inorder (Node _ Empty d Empty) = [d]
+inorder (Node _ l d r) = inorder l ++ [d] ++ inorder r
 
 size :: AATree a -> Int
 size = error "size not implemented"
