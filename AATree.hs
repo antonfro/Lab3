@@ -1,5 +1,6 @@
 {-# OPTIONS -Wall #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 --------------------------------------------------------------------------------
 
@@ -20,7 +21,7 @@ module AATree (
 
 
 -- AA search trees
-data AATree a = Empty | Node Int (AATree a) a (AATree a) 
+data AATree a = Empty | Node Int (AATree a) a (AATree a) -- What a node looks like -> (Node (Level k) (LeftTree l) (Data d) (RightTree r))
   deriving (Eq, Show, Read)
 
 emptyTree :: AATree a
@@ -33,10 +34,15 @@ get x (Node _ l d r)
         | x < d = get x l
         | x > d = get x r
 
--- You may find it helpful to define
---   split :: AATree a -> AATree a
---   skew  :: AATree a -> AATree a
--- and call these from insert.
+split :: AATree a -> AATree a
+split (Node tk tl td (Node rk rl rd (Node rrk rrl rrd rrr))) -- t = this, r = right (rr = RightRightTree)
+        | tk == rrk = Node (rk+1) (Node tk tl td rl) rd (Node rrk rrl rrd rrr)
+--split t = t -- t = tree
+
+skew  :: AATree a -> AATree a
+skew (Node tk (Node lk ll ld lr) td tr) 
+        | tk == lk = Node lk ll ld (Node tk lr td tr)
+--skew t = t
 
 insert :: Ord a => a -> AATree a -> AATree a
 insert x Empty = Node 1 Empty x Empty -- If empty tree
