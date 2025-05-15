@@ -1,6 +1,7 @@
 {-# OPTIONS -Wall #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 --------------------------------------------------------------------------------
 
@@ -33,7 +34,7 @@ get x (Node _ l d r)
         | x > d = get x r
 
 split :: AATree a -> AATree a
-split (Node tk tl td (Node rk rl rd (Node rrk rrl rrd rrr))) -- t = this, r = right (rr = RightRightTree)
+split (Node tk tl td (Node rk rl rd (Node rrk rrl rrd rrr))) -- t = thisTree, r = rightTree (rr = RightRightTree)
         | tk == rrk = Node (rk+1) (Node tk tl td rl) rd (Node rrk rrl rrd rrr)
 split t = t -- t = tree
 
@@ -82,12 +83,12 @@ remove x (Node k l d r) -- Finds the node that will be deleted
         where
             remove2 (Node tk (Node lk ll ld lr) _ (Node rk rl rd rr))
                     | l == Empty && r == Empty = Empty
-                    | l /= Empty && r == Empty = Node (lk+1) ll ld lr 
+                    | l /= Empty && r == Empty = Node (lk+1) ll ld lr
                     | l == Empty && r /= Empty = Node (rk+1) rl rd rr
                     | otherwise = Node tk (remove (maxVal l) l) (maxVal l) r
 
 maxVal :: Eq a => AATree a -> a
-maxVal Empty = error "Empty tree"
+maxVal Empty = error "Empty tree" -- Kanske inte får returnera string ?
 maxVal (Node _ _ d r)
         | r == Empty = d
         | r /= Empty = maxVal r
@@ -106,7 +107,9 @@ checkTree root =
 
 -- True if the given list is ordered
 isSorted :: Ord a => [a] -> Bool
-isSorted = error "isSorted not implemented"
+isSorted [] = True
+isSorted [x] = True
+isSorted (x:y:xs) = x < y && isSorted (y:xs)
 
 -- Check if the invariant is true for a single AA node
 -- You may want to write this as a conjunction e.g.
@@ -115,16 +118,49 @@ isSorted = error "isSorted not implemented"
 --     rightChildOK node &&
 --     rightGrandchildOK node
 -- where each conjunct checks one aspect of the invariant
+{- A node's level must be greater than its left child:
+level(node) > level(node.left) and also greater than its right-right grandchild:
+level(node) > level(node.right.right)
+For each node in the tree, the following must hold:
+– The node's children must have a level either equal to or one less
+than the node itself
+– level(node) > level(node.left)
+(x ← y not allowed)
+– level(node) > level(node.right.right)
+(x → y → z not allowed)-}
 checkLevels :: AATree a -> Bool
-checkLevels = error "checkLevels not implemented"
+checkLevels Empty = error "Empty tree"
+checkLevels (Node k Empty d Empty) = True -- Leafs are always ok ? / k = 1 ?
+
+checkLevels (Node tk (Node lk Empty ld Empty) td (Node rk Empty rd Empty)) = -- Node without grandchildren
+  tk > lk && tk >= rk
+
+checkLevels (Node tk (Node lk ll ld lr) td (Node rk rl rd Empty)) = -- Node without right right grandchild 
+  tk > lk && tk >= rk && 
+    checkLevels(Node lk ll ld lr) && checkLevels(Node rk rl rd Empty)
+
+checkLevels (Node tk (Node lk ll ld lr) td (Node rk rl rd (Node rrk rrl rrd rrr))) = 
+  tk > lk && tk >= rk && tk > rrk && 
+    checkLevels(Node lk ll ld lr) && checkLevels(Node rk rl rd (Node rrk rrl rrd rrr))
+
+
+
+{-
+checkLevels2 :: AATree a -> Bool
+checkLevels2 Empty = True
+checkLevels2 (Node k Empty d Empty) = True
+checkLevels2 (Node tk (Node lk ll ld lr) td (Node rk rl rd (Node rrk rrl rrd rrr))) = tk > lk && tk >= rk && tk > rrk && (Node tk (checkLevels2(Node lk ll ld lr)) td (checkLevels2(Node rk rl rd (checkLevels2(Node rrk rrl rrd rrr)))))
+-}
 
 isEmpty :: AATree a -> Bool
-isEmpty = error "isEmpty not implemented"
+isEmpty Empty = True
+isEmpty t = False
 
 leftSub :: AATree a -> AATree a
-leftSub = error "leftSub not implemented"
+leftSub Empty = Empty
+leftSub (Node k l d r) = l
 
 rightSub :: AATree a -> AATree a
-rightSub = error "rightSub not implemented"
-
+rightSub Empty = Empty
+rightSub (Node k l d r) = r
 --------------------------------------------------------------------------------
