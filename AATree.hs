@@ -1,7 +1,4 @@
 {-# OPTIONS -Wall #-}
-{-# OPTIONS_GHC -Wno-incomplete-patterns #-}
-{-# OPTIONS_GHC -Wno-unused-top-binds #-}
-{-# OPTIONS_GHC -Wno-unused-matches #-}
 
 --------------------------------------------------------------------------------
 
@@ -14,7 +11,8 @@ module AATree (
   remove,        -- Ord a => a -> AATree a -> AATree a
   size,          -- AATree a -> Int
   height,        -- AATree a -> Int
-  checkTree      -- Ord a => AATree a -> Bool
+  checkTree,      -- Ord a => AATree a -> Bool
+  create
  ) where
 
 --------------------------------------------------------------------------------
@@ -32,9 +30,10 @@ get x (Node _ l d r)
         | x == d = Just d
         | x < d = get x l
         | x > d = get x r
+        | otherwise = Nothing
 
 split :: AATree a -> AATree a
-split (Node tk tl td (Node rk rl rd (Node rrk rrl rrd rrr))) -- t = thisTree, r = rightTree (rr = RightRightTree)
+split (Node tk tl td (Node rk rl rd (Node rrk rrl rrd rrr))) -- t = thisTree, r = rightTree (rr = rightRightTree)
         | tk == rrk = Node (rk+1) (Node tk tl td rl) rd (Node rrk rrl rrd rrr)
 split t = t -- t = tree
 
@@ -46,17 +45,17 @@ skew t = t
 insert :: Ord a => a -> AATree a -> AATree a
 insert x Empty = Node 1 Empty x Empty -- if empty tree
 insert x (Node k l d r) -- finds the right spot
-        | x == d = Node k l d r
         | x < d = (split . skew) (Node k (insert x l) d r)
         | x > d = (split . skew) (Node k l d (insert x r))
+        | otherwise = Node k l d r
+
 
 create :: (Eq a, Ord a) => [a] -> AATree a
 create [] = Empty
 create (a:as) = create2 as (insert a Empty)
 
 create2 :: (Eq a, Ord a) => [a] -> AATree a -> AATree a
-create2 [] t = t
-create2 (a:as) (Node k l d r) = create2 as (insert a (Node k l d r))
+create2 as t = foldl (flip insert) t as
 
 inorder :: AATree a -> [a]
 inorder Empty = []
@@ -69,29 +68,32 @@ size (Node _ l _ r) = size l + 1 + size r
 
 height :: AATree a -> Int
 height Empty = 0
-height (Node k _ _ _) = k
+height (Node _ l _ r) = 1 + max (height l) (height r)
 
 --------------------------------------------------------------------------------
 -- Optional function
-
+remove :: Ord a => a -> AATree a -> AATree a
+remove = error "not "
+{- We tried
 remove :: Ord a => a -> AATree a -> AATree a -- 'Find node then delete max from l and put it there'
 remove _ Empty = Empty
 remove x (Node k l d r) -- Finds the node that will be deleted
-        | x == d = remove2 (Node k l d r)
         | x < d = Node k (remove x l) d r
         | x > d = Node k l d (remove x r)
+        | x == d = remove2 (Node k l d r)
         where
-            remove2 (Node tk (Node lk ll ld lr) _ (Node rk rl rd rr))
-                    | l == Empty && r == Empty = Empty
-                    | l /= Empty && r == Empty = Node (lk+1) ll ld lr
-                    | l == Empty && r /= Empty = Node (rk+1) rl rd rr
+            remove2 (Node k l d r)
+                    | l == Empty && l == Empty = Empty
+                    | l /= Empty && r == Empty = Node (lk+1) ll ld lr -- if left child exists
+                    | l == Empty && r /= Empty = Node (rk+1) rl rd rr -- if right 
                     | otherwise = Node tk (remove (maxVal l) l) (maxVal l) r
+remove _ t = t
 
 maxVal :: Eq a => AATree a -> a
 maxVal Empty = error "Empty tree" -- Kanske inte får returnera string ?
-maxVal (Node _ _ d r)
-        | r == Empty = d
-        | r /= Empty = maxVal r
+maxVal (Node _ _ _ r) = maxVal r 
+maxVal (Node _ _ d Empty) = d 
+-}
 
 --------------------------------------------------------------------------------
 -- Check that an AA tree is ordered and obeys the AA invariants
@@ -108,7 +110,7 @@ checkTree root =
 -- True if the given list is ordered
 isSorted :: Ord a => [a] -> Bool
 isSorted [] = True
-isSorted [x] = True
+isSorted [_] = True
 isSorted (x:y:xs) = x < y && isSorted (y:xs)
 
 -- Check if the invariant is true for a single AA node
@@ -118,49 +120,37 @@ isSorted (x:y:xs) = x < y && isSorted (y:xs)
 --     rightChildOK node &&
 --     rightGrandchildOK node
 -- where each conjunct checks one aspect of the invariant
-{- A node's level must be greater than its left child:
-level(node) > level(node.left) and also greater than its right-right grandchild:
-level(node) > level(node.right.right)
-For each node in the tree, the following must hold:
-– The node's children must have a level either equal to or one less
-than the node itself
-– level(node) > level(node.left)
-(x ← y not allowed)
-– level(node) > level(node.right.right)
-(x → y → z not allowed)-}
+
+leftChildOK :: AATree a -> Bool
+leftChildOK Empty = True -- if empty Node
+leftChildOK (Node k Empty _ _) = k == 1 -- if its a leaf
+leftChildOK (Node tk (Node lk _ _ _) _ _) = tk > lk
+
+rightChildOK :: AATree a -> Bool
+rightChildOK Empty = True -- if empty Node
+rightChildOK (Node k _ _ Empty) = k == 1 -- if its a leaf
+rightChildOK (Node tk _ _ (Node rk _ _ _)) = tk >= rk
+
+rightGrandchildOK :: AATree a -> Bool
+rightGrandchildOK Empty = True
+rightGrandchildOK (Node _ _ _ Empty) = True -- If there is no child
+rightGrandchildOK (Node _ _ _ (Node _ _ _ Empty)) = True -- If there is no grandchild.
+rightGrandchildOK (Node tk _ _ (Node _ _ _ (Node rrk _ _ _))) = tk > rrk
+
 checkLevels :: AATree a -> Bool
-checkLevels Empty = error "Empty tree"
-checkLevels (Node k Empty d Empty) = True -- Leafs are always ok ? / k = 1 ?
-
-checkLevels (Node tk (Node lk Empty ld Empty) td (Node rk Empty rd Empty)) = -- Node without grandchildren
-  tk > lk && tk >= rk
-
-checkLevels (Node tk (Node lk ll ld lr) td (Node rk rl rd Empty)) = -- Node without right right grandchild 
-  tk > lk && tk >= rk && 
-    checkLevels(Node lk ll ld lr) && checkLevels(Node rk rl rd Empty)
-
-checkLevels (Node tk (Node lk ll ld lr) td (Node rk rl rd (Node rrk rrl rrd rrr))) = 
-  tk > lk && tk >= rk && tk > rrk && 
-    checkLevels(Node lk ll ld lr) && checkLevels(Node rk rl rd (Node rrk rrl rrd rrr))
-
-
-
-{-
-checkLevels2 :: AATree a -> Bool
-checkLevels2 Empty = True
-checkLevels2 (Node k Empty d Empty) = True
-checkLevels2 (Node tk (Node lk ll ld lr) td (Node rk rl rd (Node rrk rrl rrd rrr))) = tk > lk && tk >= rk && tk > rrk && (Node tk (checkLevels2(Node lk ll ld lr)) td (checkLevels2(Node rk rl rd (checkLevels2(Node rrk rrl rrd rrr)))))
--}
+checkLevels Empty = True -- if empty Node
+checkLevels (Node k Empty _ Empty) = k == 1 -- if its a leaf
+checkLevels node = leftChildOK node && rightChildOK node && rightGrandchildOK node
 
 isEmpty :: AATree a -> Bool
 isEmpty Empty = True
-isEmpty t = False
+isEmpty (Node {}) = False
 
 leftSub :: AATree a -> AATree a
 leftSub Empty = Empty
-leftSub (Node k l d r) = l
+leftSub (Node _ l _ _) = l
 
 rightSub :: AATree a -> AATree a
 rightSub Empty = Empty
-rightSub (Node k l d r) = r
+rightSub (Node _ _ _ r) = r
 --------------------------------------------------------------------------------
