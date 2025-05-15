@@ -49,12 +49,11 @@ insert x (Node k l d r) -- finds the right spot
         | x > d = (split . skew) (Node k l d (insert x r))
         | otherwise = Node k l d r
 
-
-create :: (Eq a, Ord a) => [a] -> AATree a
+create :: (Eq a, Ord a) => [a] -> AATree a -- own function for making a tree out of a list
 create [] = Empty
 create (a:as) = create2 as (insert a Empty)
 
-create2 :: (Eq a, Ord a) => [a] -> AATree a -> AATree a
+create2 :: (Eq a, Ord a) => [a] -> AATree a -> AATree a -- helper funtion
 create2 as t = foldl (flip insert) t as
 
 inorder :: AATree a -> [a]
@@ -68,7 +67,7 @@ size (Node _ l _ r) = size l + 1 + size r
 
 height :: AATree a -> Int
 height Empty = 0
-height (Node _ l _ r) = 1 + max (height l) (height r)
+height (Node _ l _ r) = 1 + max (height l) (height r) -- 1 + the largest child
 
 --------------------------------------------------------------------------------
 -- Optional function
@@ -110,8 +109,8 @@ checkTree root =
 -- True if the given list is ordered
 isSorted :: Ord a => [a] -> Bool
 isSorted [] = True
-isSorted [_] = True
-isSorted (x:y:xs) = x < y && isSorted (y:xs)
+isSorted [_] = True -- if one element in list
+isSorted (x:y:xs) = x < y && isSorted (y:xs) -- compares the two first elements
 
 -- Check if the invariant is true for a single AA node
 -- You may want to write this as a conjunction e.g.
@@ -127,8 +126,8 @@ leftChildOK (Node k Empty _ _) = k == 1 -- if its a leaf
 leftChildOK (Node tk (Node lk _ _ _) _ _) = tk > lk
 
 rightChildOK :: AATree a -> Bool
-rightChildOK Empty = True -- if empty Node
-rightChildOK (Node k _ _ Empty) = k == 1 -- if its a leaf
+rightChildOK Empty = True
+rightChildOK (Node k _ _ Empty) = k == 1
 rightChildOK (Node tk _ _ (Node rk _ _ _)) = tk >= rk
 
 rightGrandchildOK :: AATree a -> Bool
@@ -138,13 +137,13 @@ rightGrandchildOK (Node _ _ _ (Node _ _ _ Empty)) = True -- If there is no grand
 rightGrandchildOK (Node tk _ _ (Node _ _ _ (Node rrk _ _ _))) = tk > rrk
 
 checkLevels :: AATree a -> Bool
-checkLevels Empty = True -- if empty Node
-checkLevels (Node k Empty _ Empty) = k == 1 -- if its a leaf
+checkLevels Empty = True
+checkLevels (Node k Empty _ Empty) = k == 1
 checkLevels node = leftChildOK node && rightChildOK node && rightGrandchildOK node
 
 isEmpty :: AATree a -> Bool
 isEmpty Empty = True
-isEmpty (Node {}) = False
+isEmpty (Node {}) = False -- any Node (Node _ _ _ _)
 
 leftSub :: AATree a -> AATree a
 leftSub Empty = Empty
